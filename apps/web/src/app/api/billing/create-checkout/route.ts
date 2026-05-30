@@ -13,7 +13,6 @@ export async function POST(req: Request) {
     const { user } = await requireUser()
     const { plan } = await parseBody(req, schema)
 
-    const stripe = getStripe()
     const priceId = PLAN_PRICE_IDS[plan as Exclude<Plan, 'free'>]
     if (!priceId) return jsonError('Plan is not available for purchase', 400)
 
@@ -26,7 +25,7 @@ export async function POST(req: Request) {
       .single()
       .then((r) => r.data)
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       customer: manager?.stripe_customer_id ?? undefined,

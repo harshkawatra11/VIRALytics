@@ -3,6 +3,7 @@ import type { SyncJobData } from '../queues'
 import { env } from '../config'
 import type { NormalizedPost, ScrapeResult } from './types'
 import { extractHashtags, parseIsoDuration } from './types'
+import { fetchYoutubeAnalytics } from './youtube-analytics'
 
 const API = 'https://www.googleapis.com/youtube/v3'
 
@@ -71,7 +72,10 @@ async function getJson(url: string): Promise<unknown> {
   return res.json()
 }
 
-export async function scrapeYoutube(job: SyncJobData): Promise<ScrapeResult> {
+export async function scrapeYoutube(
+  job: SyncJobData,
+  oauthAccessToken?: string | null
+): Promise<ScrapeResult> {
   const key = env.YOUTUBE_API_KEY
   // 1. Resolve channel (by stored channel id, else by handle).
   const channelQuery = job.platformId
@@ -120,6 +124,23 @@ export async function scrapeYoutube(job: SyncJobData): Promise<ScrapeResult> {
         completionRate: null,
         clickThroughRate: null,
       })
+    }
+  }
+
+  // If an OAuth token is available, enrich with private Analytics metrics.
+  if (oauthAccessToken && posts.length > 0 && channel.id) {
+    const analytics = await fetchYoutubeAnalytics(
+      oauthAccessToken,
+      channel.id,
+      posts.map((p) => p.platformPostId)
+    )
+    for (const post of posts) {
+      const a = analytics.get(post.platformPostId)
+      if (a) {
+        post.avgWatchTimeSeconds = a.avgWatchTimeSeconds
+        post.completionRate = a.completionRate
+        post.clickThroughRate = a.clickThroughRate
+      }
     }
   }
 

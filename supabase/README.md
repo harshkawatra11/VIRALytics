@@ -28,6 +28,7 @@ Or paste each `migrations/000N_*.sql` (in order) into the Supabase SQL editor.
 | 0007 | pg_cron partition maintenance + `refresh_account_aggregates` RPC |
 | 0008 | `due_accounts()` RPC — the worker sweeper's due-account query |
 | 0009 | `manager_overview()` RPC — aggregate dashboard stats computed in SQL |
+| 0010 | `tokens_needing_refresh` view + `mark_token_refresh_failure()` — OAuth token-refresh helpers |
 
 ## Regenerate TypeScript types after schema changes
 

@@ -1,13 +1,14 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowUpDown, Search } from 'lucide-react'
+import { ArrowUpDown, Download, Search } from 'lucide-react'
 import { PLATFORMS, formatCompact, formatDateDMY, type Platform } from '@viralytics/core'
 import type { VideoRow } from '@/lib/queries/videos'
 import { PlatformIcon, PLATFORM_LABELS } from '@/components/platform-icon'
 import { ViralScoreBadge } from '@/components/viral-score-badge'
+import { VideoDetailPanel } from '@/components/video-detail-panel'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -50,6 +51,9 @@ export function VideosView(props: Props) {
   )
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+
+  const exportUrl = `/api/analytics/export?${params.toString()}`
 
   function toggleSort(col: string) {
     const dir = props.sortBy === col && props.sortDir === 'desc' ? 'asc' : 'desc'
@@ -106,7 +110,16 @@ export function VideosView(props: Props) {
           />
         </div>
 
-        <span className="ml-auto text-xs text-[var(--color-text-subtle)]">
+        <a
+          href={exportUrl}
+          download
+          className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--color-border-strong)] px-3 py-1.5 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-surface-muted)]"
+        >
+          <Download size={12} />
+          Export CSV
+        </a>
+
+        <span className="text-xs text-[var(--color-text-subtle)]">
           {formatCompact(total)} videos
         </span>
       </div>
@@ -137,7 +150,11 @@ export function VideosView(props: Props) {
               rows.map((v) => {
                 const totalEng = v.current_likes + v.current_comments + v.current_shares
                 return (
-                  <tr key={v.id} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-muted)]">
+                  <tr
+                  key={v.id}
+                  className="cursor-pointer border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-muted)]"
+                  onClick={() => setSelectedPostId(v.id)}
+                >
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <PlatformIcon platform={v.platform as Platform} size={14} />
@@ -209,6 +226,17 @@ export function VideosView(props: Props) {
             Next
           </button>
         </div>
+      )}
+
+      <VideoDetailPanel
+        postId={selectedPostId}
+        onClose={() => setSelectedPostId(null)}
+      />
+      {selectedPostId && (
+        <div
+          className="fixed inset-0 z-30 bg-black/20"
+          onClick={() => setSelectedPostId(null)}
+        />
       )}
     </div>
   )

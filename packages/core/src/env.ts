@@ -19,6 +19,10 @@ const workerSchema = serverSchema.extend({
   REDIS_URL: z.string().min(1),
   APIFY_API_TOKEN: z.string().min(1),
   YOUTUBE_API_KEY: z.string().min(1),
+  YOUTUBE_CLIENT_ID: z.string().default(''),
+  YOUTUBE_CLIENT_SECRET: z.string().default(''),
+  META_APP_ID: z.string().default(''),
+  META_APP_SECRET: z.string().default(''),
 })
 
 export type ServerEnv = z.infer<typeof serverSchema>
