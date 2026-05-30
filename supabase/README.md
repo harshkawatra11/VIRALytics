@@ -26,6 +26,7 @@ Or paste each `migrations/000N_*.sql` (in order) into the Supabase SQL editor.
 | 0005 | `sync_jobs` audit log |
 | 0006 | RLS policies for all tenant tables |
 | 0007 | pg_cron partition maintenance + `refresh_account_aggregates` RPC |
+| 0008 | `due_accounts()` RPC — the worker sweeper's due-account query |
 
 ## Regenerate TypeScript types after schema changes
 

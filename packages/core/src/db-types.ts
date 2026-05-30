@@ -278,6 +278,16 @@ export interface Database {
     Functions: {
       refresh_account_aggregates: { Args: { p_account_id: string }; Returns: undefined }
       owns_account: { Args: { p_account_id: string }; Returns: boolean }
+      due_accounts: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+          manager_id: string
+          platform: 'youtube' | 'instagram' | 'tiktok'
+          handle: string
+          platform_id: string | null
+        }[]
+      }
     }
     Views: Record<never, never>
     Enums: Record<never, never>
