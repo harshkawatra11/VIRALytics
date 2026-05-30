@@ -1,6 +1,6 @@
 import { handle, jsonError, jsonOk, requireUser } from '@/lib/api'
 import { createServiceClient } from '@/lib/supabase/service'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 
 export async function POST() {
   return handle(async () => {
@@ -17,7 +17,7 @@ export async function POST() {
       return jsonError('No billing account yet — subscribe to a plan first', 400)
     }
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: manager.stripe_customer_id,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
     })

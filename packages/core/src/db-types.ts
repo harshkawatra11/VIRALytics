@@ -288,6 +288,7 @@ export interface Database {
           platform_id: string | null
         }[]
       }
+      manager_overview: { Args: { p_collection?: string | null }; Returns: Json }
     }
     Views: Record<never, never>
     Enums: Record<never, never>

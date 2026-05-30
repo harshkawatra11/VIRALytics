@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { PLANS, type Plan } from '@viralytics/core'
 import { handle, jsonError, jsonOk, parseBody, requireUser } from '@/lib/api'
 import { createServiceClient } from '@/lib/supabase/service'
-import { stripe, PLAN_PRICE_IDS } from '@/lib/stripe'
+import { getStripe, PLAN_PRICE_IDS } from '@/lib/stripe'
 
 const schema = z.object({
   plan: z.enum(PLANS).refine((p) => p !== 'free', 'Cannot checkout the free plan'),
@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     const { user } = await requireUser()
     const { plan } = await parseBody(req, schema)
 
+    const stripe = getStripe()
     const priceId = PLAN_PRICE_IDS[plan as Exclude<Plan, 'free'>]
     if (!priceId) return jsonError('Plan is not available for purchase', 400)
 

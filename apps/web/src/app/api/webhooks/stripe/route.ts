@@ -1,7 +1,7 @@
 import type Stripe from 'stripe'
 import { PLAN_CONFIG } from '@viralytics/core'
 import { createServiceClient } from '@/lib/supabase/service'
-import { stripe, planFromPriceId, planUpdate } from '@/lib/stripe'
+import { getStripe, planFromPriceId, planUpdate } from '@/lib/stripe'
 
 // Stripe requires the raw, unparsed body for signature verification.
 export async function POST(req: Request) {
@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(await req.text(), sig, secret)
+    event = getStripe().webhooks.constructEvent(await req.text(), sig, secret)
   } catch (err) {
     console.error('[stripe] signature verification failed', err)
     return new Response('Invalid signature', { status: 400 })
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         const session = event.data.object
         const managerId = session.client_reference_id ?? session.metadata?.manager_id
         if (managerId && session.subscription) {
-          const sub = await stripe.subscriptions.retrieve(session.subscription as string)
+          const sub = await getStripe().subscriptions.retrieve(session.subscription as string)
           const plan = planFromPriceId(sub.items.data[0]?.price.id)
           await svc
             .from('managers')
