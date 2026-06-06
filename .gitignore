@@ -34,3 +34,9 @@ Thumbs.db
 # misc
 .vercel
 .sentryclirc
+
+# tsbuildinfo cache files
+*.tsbuildinfo
+
+# session transcript files
+*.txt
