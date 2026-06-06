@@ -13,7 +13,7 @@ build/
 .env
 .env.local
 .env*.local
-!.env.example
+.env.example
 
 # logs
 *.log
@@ -34,6 +34,7 @@ Thumbs.db
 # misc
 .vercel
 .sentryclirc
+.mcp.json
 
 # tsbuildinfo cache files
 *.tsbuildinfo
