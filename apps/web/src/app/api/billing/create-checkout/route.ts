@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { PLANS, type Plan } from '@viralytics/core'
 import { handle, jsonError, jsonOk, parseBody, requireUser } from '@/lib/api'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getStripe, PLAN_PRICE_IDS } from '@/lib/stripe'
+import { getRazorpay, PLAN_IDS } from '@/lib/razorpay'
 
 const schema = z.object({
   plan: z.enum(PLANS).refine((p) => p !== 'free', 'Cannot checkout the free plan'),
@@ -13,31 +13,32 @@ export async function POST(req: Request) {
     const { user } = await requireUser()
     const { plan } = await parseBody(req, schema)
 
-    const priceId = PLAN_PRICE_IDS[plan as Exclude<Plan, 'free'>]
-    if (!priceId) return jsonError('Plan is not available for purchase', 400)
+    const razorpayPlanId = PLAN_IDS[plan as Exclude<Plan, 'free'>]
+    if (!razorpayPlanId) return jsonError('Plan is not available for purchase', 400)
 
-    // Reuse an existing Stripe customer when we already have one.
     const svc = createServiceClient()
     const manager = await svc
       .from('managers')
-      .select('stripe_customer_id, email')
+      .select('razorpay_customer_id, email')
       .eq('id', user.id)
       .single()
       .then((r) => r.data)
 
-    const session = await getStripe().checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      customer: manager?.stripe_customer_id ?? undefined,
-      customer_email: manager?.stripe_customer_id ? undefined : (manager?.email ?? user.email),
-      client_reference_id: user.id,
-      subscription_data: { trial_period_days: 14, metadata: { manager_id: user.id } },
-      metadata: { manager_id: user.id, plan },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?checkout=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?checkout=cancelled`,
-      allow_promotion_codes: true,
-    })
+    // Create a Razorpay subscription (status: created → activate after first payment)
+    const subscription = await getRazorpay().subscriptions.create({
+      plan_id: razorpayPlanId,
+      customer_notify: 1,
+      quantity: 1,
+      total_count: 120, // 10 years max; cancel anytime via webhook
+      notes: { manager_id: user.id, plan },
+    } as Parameters<ReturnType<typeof getRazorpay>['subscriptions']['create']>[0])
 
-    return jsonOk({ url: session.url })
+    return jsonOk({
+      subscriptionId: subscription.id,
+      keyId: process.env.RAZORPAY_KEY_ID,
+      email: manager?.email ?? user.email,
+      managerId: user.id,
+      plan,
+    })
   })
 }

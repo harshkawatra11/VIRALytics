@@ -20,8 +20,8 @@ type ManagerRow = {
   plan: Plan
   account_limit: number
   sync_interval_seconds: number
-  stripe_customer_id: string | null
-  stripe_subscription_id: string | null
+  razorpay_customer_id: string | null
+  razorpay_subscription_id: string | null
   created_at: string
 }
 type ManagerInsert = {
@@ -31,8 +31,8 @@ type ManagerInsert = {
   plan?: Plan
   account_limit?: number
   sync_interval_seconds?: number
-  stripe_customer_id?: string | null
-  stripe_subscription_id?: string | null
+  razorpay_customer_id?: string | null
+  razorpay_subscription_id?: string | null
   created_at?: string
 }
 

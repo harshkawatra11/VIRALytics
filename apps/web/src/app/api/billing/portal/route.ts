@@ -1,27 +1,26 @@
 import { handle, jsonError, jsonOk, requireUser } from '@/lib/api'
 import { createServiceClient } from '@/lib/supabase/service'
-import { getStripe } from '@/lib/stripe'
+import { getRazorpay } from '@/lib/razorpay'
 
+/** Cancel the active subscription at period end. */
 export async function POST() {
   return handle(async () => {
     const { user } = await requireUser()
     const svc = createServiceClient()
     const manager = await svc
       .from('managers')
-      .select('stripe_customer_id')
+      .select('razorpay_subscription_id')
       .eq('id', user.id)
       .single()
       .then((r) => r.data)
 
-    if (!manager?.stripe_customer_id) {
-      return jsonError('No billing account yet — subscribe to a plan first', 400)
+    if (!manager?.razorpay_subscription_id) {
+      return jsonError('No active subscription', 400)
     }
 
-    const session = await getStripe().billingPortal.sessions.create({
-      customer: manager.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings`,
-    })
+    // cancel_at_cycle_end = 1 → cancel after the current billing period
+    await getRazorpay().subscriptions.cancel(manager.razorpay_subscription_id, true)
 
-    return jsonOk({ url: session.url })
+    return jsonOk({ message: 'Subscription will be cancelled at the end of the current period.' })
   })
 }
