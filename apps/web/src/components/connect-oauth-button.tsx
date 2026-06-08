@@ -8,12 +8,19 @@ import { Button } from '@/components/ui/button'
 const PLATFORM_DISPLAY: Partial<Record<Platform, string>> = {
   youtube: 'YouTube',
   instagram: 'Instagram',
+  tiktok: 'TikTok',
+}
+
+const PLATFORM_BENEFIT: Partial<Record<Platform, string>> = {
+  youtube: 'unlock watch time, completion rate & CTR',
+  instagram: 'unlock real-time metrics, saves & reach',
+  tiktok: 'unlock real-time views, likes & shares',
 }
 
 /**
- * "Connect for deep analytics" upgrade button. Redirects to the platform's OAuth
- * authorize URL and exchanges the code for encrypted tokens server-side.
- * Only shown for platforms that support OAuth private metrics (YT + IG).
+ * "Connect for deep analytics" upgrade button.
+ * Redirects to the platform's OAuth authorize route which handles PKCE (TikTok),
+ * token exchange, encryption, and queuing an immediate re-sync.
  */
 export function ConnectOAuthButton({
   accountId,
@@ -26,9 +33,6 @@ export function ConnectOAuthButton({
 }) {
   const [loading, setLoading] = useState(false)
 
-  // TikTok doesn't expose private metrics via OAuth — honest non-render.
-  if (platform === 'tiktok') return null
-
   if (connected) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-[var(--color-accent)]">
@@ -39,7 +43,6 @@ export function ConnectOAuthButton({
 
   function connect() {
     setLoading(true)
-    // Navigate to the authorize route (server-side redirect to platform OAuth).
     window.location.href = `/api/oauth/${platform}/authorize?accountId=${accountId}`
   }
 
@@ -49,7 +52,7 @@ export function ConnectOAuthButton({
       size="sm"
       disabled={loading}
       onClick={connect}
-      title={`Connect ${PLATFORM_DISPLAY[platform]} to unlock watch time & completion rate`}
+      title={`Connect ${PLATFORM_DISPLAY[platform]} to ${PLATFORM_BENEFIT[platform]}`}
     >
       <Zap size={13} />
       Connect {PLATFORM_DISPLAY[platform]}

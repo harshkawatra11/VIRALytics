@@ -18,6 +18,11 @@ export async function POST(req: Request) {
 
     if (error) return jsonError(error.message, 400)
     // The managers row is created by the on_auth_user_created DB trigger.
+    // If email confirmation is disabled, sign in immediately so the session cookie is set.
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (!signInError && signInData.session) {
+      return jsonOk({ success: true, redirect: '/dashboard' })
+    }
     return jsonOk({ success: true, message: 'Check your email to confirm your account.' })
   })
 }

@@ -92,8 +92,29 @@ async function refreshToken(token: {
     newAccessToken = body.access_token
     newExpiresAt = new Date(Date.now() + body.expires_in * 1000).toISOString()
 
+  } else if (token.platform === 'tiktok') {
+    // TikTok rotates BOTH tokens on refresh (access + refresh token)
+    if (!token.encrypted_refresh_token) return
+    const refreshTk = decrypt(token.encrypted_refresh_token, key)
+    const res = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_key: env.TIKTOK_CLIENT_KEY,
+        client_secret: env.TIKTOK_CLIENT_SECRET,
+        grant_type: 'refresh_token',
+        refresh_token: refreshTk,
+      }),
+    })
+    if (!res.ok) throw new Error(`TikTok refresh HTTP ${res.status}`)
+    const body = await res.json() as { data?: { access_token: string; refresh_token: string; expires_in: number; refresh_expires_in: number }; error?: { code: string; message: string } }
+    if (body.error?.code && body.error.code !== 'ok') throw new Error(`TikTok refresh error: ${body.error.message}`)
+    newAccessToken = body.data!.access_token
+    newRefreshToken = body.data!.refresh_token
+    newExpiresAt = new Date(Date.now() + body.data!.expires_in * 1000).toISOString()
+    // Also write updated refresh token expiry implicitly via the upsert below
   } else {
-    return // TikTok handled separately (bidirectional rotation)
+    return
   }
 
   await db

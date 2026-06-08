@@ -25,7 +25,7 @@ export const queues = {
 /** Route a sync job to its platform queue. De-dupes by jobId per account+type. */
 export async function enqueueSync(data: SyncJobData): Promise<void> {
   const queue = queues[data.platform]
-  await queue.add(`${data.platform}:${data.jobType}`, data, {
-    jobId: `${data.jobType}:${data.accountId}`,
+  await queue.add(`${data.platform}_${data.jobType}`, data, {
+    jobId: `${data.jobType}_${data.accountId}`,
   })
 }

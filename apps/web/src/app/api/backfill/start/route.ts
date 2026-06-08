@@ -30,7 +30,8 @@ export async function POST(req: Request) {
       jobType: 'backfill',
     }
     await queue.add(`backfill:${accountId}`, jobData, {
-      jobId: `backfill:${accountId}`,
+      // jobId must not contain ':' (BullMQ restriction) — use '_' as the separator.
+      jobId: `backfill_${accountId}`,
       priority: 10,
     })
     await queue.close()

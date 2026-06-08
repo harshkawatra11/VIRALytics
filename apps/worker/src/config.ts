@@ -17,5 +17,6 @@ export const CONCURRENCY = {
 /** How many due accounts the sweeper enqueues per tick, and the tick interval. */
 export const SWEEPER = {
   batchSize: 200,
-  tickMs: 120_000, // every 2 minutes
+  tickMs: 120_000,  // check every 2 minutes
+  maxPerTick: 50,   // cost cap: never fire >50 Apify runs per tick regardless of backlog
 } as const

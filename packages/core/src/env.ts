@@ -23,6 +23,8 @@ const workerSchema = serverSchema.extend({
   YOUTUBE_CLIENT_SECRET: z.string().default(''),
   META_APP_ID: z.string().default(''),
   META_APP_SECRET: z.string().default(''),
+  TIKTOK_CLIENT_KEY: z.string().default(''),
+  TIKTOK_CLIENT_SECRET: z.string().default(''),
 })
 
 export type ServerEnv = z.infer<typeof serverSchema>

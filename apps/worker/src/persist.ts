@@ -5,6 +5,7 @@ import type { ScrapeResult } from './scrapers/types'
 
 type PostInsert = Database['public']['Tables']['posts']['Insert']
 type MetricInsert = Database['public']['Tables']['post_metrics']['Insert']
+type AccountUpdate = Database['public']['Tables']['tracked_accounts']['Update']
 
 export interface PersistResult {
   postsFound: number
@@ -22,22 +23,35 @@ export interface PersistResult {
  */
 export async function persistScrape(job: SyncJobData, result: ScrapeResult): Promise<PersistResult> {
   const { accountId } = job
-  const followers = result.account.followerCount ?? 0
+  const a = result.account
 
-  // 1. account profile
-  await db
-    .from('tracked_accounts')
-    .update({
-      display_name: result.account.displayName,
-      avatar_url: result.account.avatarUrl,
-      follower_count: result.account.followerCount,
-      following_count: result.account.followingCount,
-      total_posts: result.account.totalPosts,
-      platform_id: result.account.platformId,
-      status: 'active',
-      last_synced_at: new Date().toISOString(),
-    })
-    .eq('id', accountId)
+  // 1. account profile — only write fields the scraper actually returned, so a
+  // partial scrape (e.g. the backfill post-scraper, which has no profile data)
+  // never wipes good values like follower_count.
+  const accountUpdate: AccountUpdate = {
+    status: 'active',
+    last_synced_at: new Date().toISOString(),
+  }
+  if (a.displayName !== null) accountUpdate.display_name = a.displayName
+  if (a.avatarUrl !== null) accountUpdate.avatar_url = a.avatarUrl
+  if (a.followerCount !== null) accountUpdate.follower_count = a.followerCount
+  if (a.followingCount !== null) accountUpdate.following_count = a.followingCount
+  if (a.totalPosts !== null) accountUpdate.total_posts = a.totalPosts
+  if (a.platformId !== null) accountUpdate.platform_id = a.platformId
+  await db.from('tracked_accounts').update(accountUpdate).eq('id', accountId)
+
+  // Followers used for engagement-rate math: prefer the scrape, else the stored
+  // value (so backfill rows get accurate rates instead of dividing by zero).
+  let followers = a.followerCount ?? 0
+  if (followers === 0) {
+    const stored = await db
+      .from('tracked_accounts')
+      .select('follower_count')
+      .eq('id', accountId)
+      .single()
+      .then((r) => r.data?.follower_count ?? 0)
+    followers = stored
+  }
 
   if (result.posts.length === 0) return { postsFound: 0, postsNew: 0 }
 
@@ -105,7 +119,7 @@ export async function persistScrape(job: SyncJobData, result: ScrapeResult): Pro
   // 4. account snapshot
   await db.from('account_snapshots').insert({
     account_id: accountId,
-    follower_count: result.account.followerCount,
+    follower_count: a.followerCount ?? followers,
     total_views: result.posts.reduce((sum, p) => sum + p.views, 0),
   })
 

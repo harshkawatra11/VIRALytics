@@ -1,3 +1,9 @@
+/** Exact comma-separated number (e.g. 4_207 -> "4,207", 1_400_000 -> "1,400,000"). */
+export function formatNumber(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  return Math.round(n).toLocaleString('en-US')
+}
+
 /** Compact number formatting (e.g. 1_234 -> "1.2K", 4_500_000 -> "4.5M"). */
 export function formatCompact(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return '—'

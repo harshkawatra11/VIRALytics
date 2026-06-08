@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { formatCompact, formatRelativeDate, type AccountStatus, type Platform } from '@viralytics/core'
 import { createClient } from '@/lib/supabase/server'
 import { PlatformIcon } from '@/components/platform-icon'
@@ -49,17 +50,23 @@ export default async function AccountsPage() {
             </thead>
             <tbody>
               {accounts.map((a) => (
-                <tr key={a.id} className="border-b border-[var(--color-border)] last:border-0">
+                <tr
+                  key={a.id}
+                  className="group border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-surface-muted)] transition-colors"
+                >
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
+                    <Link
+                      href={`/accounts/${a.id}`}
+                      className="flex items-center gap-2.5"
+                    >
                       <PlatformIcon platform={a.platform as Platform} />
                       <div>
-                        <div className="font-medium text-[var(--color-text)]">
+                        <div className="font-medium text-[var(--color-text)] group-hover:text-[var(--color-brand)] transition-colors">
                           {a.display_name ?? a.handle}
                         </div>
                         <div className="text-xs text-[var(--color-text-subtle)]">@{a.handle}</div>
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <AccountStatusBadge status={a.status as AccountStatus} />

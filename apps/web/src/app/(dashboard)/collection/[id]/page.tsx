@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { getOverview, toCumulative } from '@/lib/queries/overview'
-import { StatCards } from '@/components/stat-cards'
-import { OverviewCharts } from '@/components/overview-charts'
+import { getOverview } from '@/lib/queries/overview'
+import { OverviewDashboard } from '@/components/dashboard/overview-dashboard'
 
 export default async function CollectionOverview({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -16,14 +15,5 @@ export default async function CollectionOverview({ params }: { params: Promise<{
     )
   }
 
-  return (
-    <div className="space-y-4">
-      <StatCards totals={overview.totals} />
-      <OverviewCharts
-        cumulative={toCumulative(overview.timeseries)}
-        virality={overview.virality}
-        duration={overview.duration}
-      />
-    </div>
-  )
+  return <OverviewDashboard overview={overview} />
 }

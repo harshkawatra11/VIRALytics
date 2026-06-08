@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutGrid, Film, Users, Plus, Settings, FolderOpen } from 'lucide-react'
 import { formatCompact } from '@viralytics/core'
 import { cn } from '@/lib/utils'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export interface SidebarCollection {
   id: string
@@ -118,11 +119,14 @@ export function Sidebar({ collections, trackedPosts, managerName }: SidebarProps
 
       {/* sticky bottom */}
       <div className="mt-auto border-t border-[var(--color-sidebar-border)]">
-        <div className="px-5 py-3">
-          <div className="text-sm font-semibold text-white tabular">
-            {formatCompact(trackedPosts)}
+        <div className="flex items-center justify-between px-5 py-3">
+          <div>
+            <div className="text-sm font-semibold text-white tabular">
+              {formatCompact(trackedPosts)}
+            </div>
+            <div className="text-[10px] text-[var(--color-sidebar-text-muted)]">Tracked posts</div>
           </div>
-          <div className="text-[10px] text-[var(--color-sidebar-text-muted)]">Tracked posts</div>
+          <ThemeToggle />
         </div>
         <Link
           href="/settings"

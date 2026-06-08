@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import Image from 'next/image'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowUpDown, Download, Search } from 'lucide-react'
-import { PLATFORMS, formatCompact, formatDateDMY, type Platform } from '@viralytics/core'
+import { PLATFORMS, formatCompact, formatNumber, formatDateDMY, type Platform } from '@viralytics/core'
 import type { VideoRow } from '@/lib/queries/videos'
 import { PlatformIcon, PLATFORM_LABELS } from '@/components/platform-icon'
 import { ViralScoreBadge } from '@/components/viral-score-badge'
@@ -187,13 +187,13 @@ export function VideosView(props: Props) {
                         </a>
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular">{formatCompact(v.current_views)}</td>
+                    <td className="px-3 py-2.5 text-right tabular">{formatNumber(v.current_views)}</td>
                     <td className="px-3 py-2.5">
                       <ViralScoreBadge score={v.viral_score} />
                     </td>
                     <td className="px-3 py-2.5 text-right tabular">{v.current_engagement_rate.toFixed(1)}%</td>
-                    <td className="px-3 py-2.5 text-right tabular">{formatCompact(totalEng)}</td>
-                    <td className="px-3 py-2.5 text-right tabular">{formatCompact(v.current_comments)}</td>
+                    <td className="px-3 py-2.5 text-right tabular">{formatNumber(totalEng)}</td>
+                    <td className="px-3 py-2.5 text-right tabular">{formatNumber(v.current_comments)}</td>
                     <td className="px-3 py-2.5 text-right text-xs text-[var(--color-text-muted)]">
                       {v.posted_at ? formatDateDMY(new Date(v.posted_at)) : '—'}
                     </td>

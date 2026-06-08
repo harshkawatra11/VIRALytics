@@ -4,6 +4,7 @@ import { logger } from './logger'
 import { invalidateAccountCache } from './cache'
 import { persistScrape } from './persist'
 import { scrape } from './scrapers'
+import { assertScrapeQuality } from './scrape-monitor'
 import type { SyncJobData } from './queues'
 
 /**
@@ -37,6 +38,12 @@ export async function processSync(job: Job<SyncJobData>) {
       await finishJob(jobRow?.id, 'completed', { startedAt })
       log.warn({ status: result.status }, 'account not scrapable')
       return { skipped: true, status: result.status }
+    }
+
+    const safe = assertScrapeQuality(data, result)
+    if (!safe) {
+      await finishJob(jobRow?.id, 'completed', { startedAt, postsFound: 0, postsNew: 0 })
+      return { postsFound: 0, postsNew: 0, skipped: true, reason: 'quality_check_failed' }
     }
 
     const { postsFound, postsNew } = await persistScrape(data, result)

@@ -52,6 +52,35 @@ function igPostType(t: string | undefined): NormalizedPost['postType'] {
   return 'image'
 }
 
+type IgPost = z.infer<typeof igPostSchema>
+
+/** Map one Instagram post item (same shape from both IG actors) to our model. */
+function mapIgPost(post: IgPost): NormalizedPost {
+  return {
+    platformPostId: post.id ?? post.shortCode ?? post.url ?? crypto.randomUUID(),
+    postType: igPostType(post.type),
+    caption: post.caption ?? null,
+    hashtags: extractHashtags(post.caption),
+    thumbnailUrl: post.displayUrl ?? null,
+    durationSeconds: post.videoDuration ? Math.round(post.videoDuration) : null,
+    permalink: post.url ?? null,
+    postedAt: post.timestamp ?? null,
+    // Instagram exposes two metrics: videoPlayCount (what the app shows as
+    // "views" for reels) and the smaller legacy videoViewCount. Take the larger
+    // so our number matches what users see in the Instagram app.
+    views: Math.max(n(post.videoPlayCount), n(post.videoViewCount)),
+    likes: n(post.likesCount),
+    comments: n(post.commentsCount),
+    shares: 0,
+    saves: null,
+    impressions: null,
+    reach: null,
+    avgWatchTimeSeconds: null,
+    completionRate: null,
+    clickThroughRate: null,
+  }
+}
+
 export async function scrapeInstagram(job: SyncJobData): Promise<ScrapeResult> {
   const run = await client.actor('apify/instagram-profile-scraper').call({
     usernames: [job.handle],
@@ -65,29 +94,7 @@ export async function scrapeInstagram(job: SyncJobData): Promise<ScrapeResult> {
   const p = profile.data
   if (p.private) return { account: empty(), posts: [], status: 'private' }
 
-  const posts: NormalizedPost[] = (p.latestPosts ?? []).map((post) => {
-    const views = n(post.videoViewCount ?? post.videoPlayCount)
-    return {
-      platformPostId: post.id ?? post.shortCode ?? post.url ?? crypto.randomUUID(),
-      postType: igPostType(post.type),
-      caption: post.caption ?? null,
-      hashtags: extractHashtags(post.caption),
-      thumbnailUrl: post.displayUrl ?? null,
-      durationSeconds: post.videoDuration ? Math.round(post.videoDuration) : null,
-      permalink: post.url ?? null,
-      postedAt: post.timestamp ?? null,
-      views,
-      likes: n(post.likesCount),
-      comments: n(post.commentsCount),
-      shares: 0,
-      saves: null,
-      impressions: null,
-      reach: null,
-      avgWatchTimeSeconds: null,
-      completionRate: null,
-      clickThroughRate: null,
-    }
-  })
+  const posts: NormalizedPost[] = (p.latestPosts ?? []).map(mapIgPost)
 
   return {
     account: {
@@ -100,6 +107,36 @@ export async function scrapeInstagram(job: SyncJobData): Promise<ScrapeResult> {
     },
     posts,
   }
+}
+
+/** How many posts a full backfill will pull at most (covers virtually any creator). */
+const BACKFILL_LIMIT = 2_000
+
+/**
+ * Full historical Instagram backfill. The profile scraper only returns the most
+ * recent ~12 posts; this uses the general instagram-scraper in "posts" mode,
+ * which paginates the entire grid. Returns posts only — account profile fields
+ * are left null and preserved by persist (which never overwrites with null).
+ */
+export async function scrapeInstagramBackfill(job: SyncJobData): Promise<ScrapeResult> {
+  const run = await client.actor('apify/instagram-scraper').call({
+    directUrls: [`https://www.instagram.com/${job.handle}/`],
+    resultsType: 'posts',
+    resultsLimit: BACKFILL_LIMIT,
+    addParentData: false,
+  })
+  const { items } = await client.dataset(run.defaultDatasetId).listItems()
+  const posts: NormalizedPost[] = items
+    .flatMap((it) => {
+      const r = igPostSchema.safeParse(it)
+      return r.success && (r.data.id || r.data.shortCode || r.data.url) ? [r.data] : []
+    })
+    .map(mapIgPost)
+
+  // No posts at all usually means a private/locked or renamed profile. Don't
+  // mark not_found (that would flip a working account to an error state) — just
+  // return empty so the regular sync keeps the account healthy.
+  return { account: empty(), posts }
 }
 
 // ------------------------------------------------------------------- TikTok

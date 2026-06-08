@@ -1,7 +1,7 @@
 import { addAccountSchema, parseAccountInput, HandleParseError } from '@viralytics/core'
 import { handle, jsonError, jsonOk, parseBody, requireUser } from '@/lib/api'
 import { addAccountLimiter } from '@/lib/ratelimit'
-import { enqueueSync } from '@/lib/queue'
+import { enqueueSync, enqueueBackfill } from '@/lib/queue'
 
 export async function GET() {
   return handle(async () => {
@@ -72,15 +72,35 @@ export async function POST(req: Request) {
       return jsonError(error.message, 400)
     }
 
-    // Kick off the initial scrape immediately.
-    await enqueueSync({
-      accountId: account.id,
-      managerId: user.id,
-      platform: account.platform,
-      handle: account.handle,
-      platformId: account.platform_id,
-      jobType: 'initial',
-    })
+    // Kick off the initial scrape immediately. Roll back the insert if queue fails.
+    try {
+      await enqueueSync({
+        accountId: account.id,
+        managerId: user.id,
+        platform: account.platform,
+        handle: account.handle,
+        platformId: account.platform_id,
+        jobType: 'initial',
+      })
+    } catch (err) {
+      await supabase.from('tracked_accounts').delete().eq('id', account.id)
+      throw err
+    }
+
+    // Also queue a full historical backfill (low priority) so every post is
+    // captured, not just the recent batch. Best-effort — a failure here must not
+    // fail the add, since the initial sync already succeeded.
+    try {
+      await enqueueBackfill({
+        accountId: account.id,
+        managerId: user.id,
+        platform: account.platform,
+        handle: account.handle,
+        platformId: account.platform_id,
+      })
+    } catch {
+      // swallow — backfill can be retried later via the refresh/backfill endpoints
+    }
 
     return jsonOk({ account }, 201)
   })

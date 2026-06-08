@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar, type SidebarCollection } from '@/components/sidebar'
+import { SyncOnOpen } from '@/components/sync-on-open'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -32,6 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-screen">
+      <SyncOnOpen />
       <Sidebar
         collections={(collections ?? []) as SidebarCollection[]}
         trackedPosts={trackedPosts ?? 0}

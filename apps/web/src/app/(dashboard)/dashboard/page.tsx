@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { getOverview, toCumulative } from '@/lib/queries/overview'
-import { StatCards } from '@/components/stat-cards'
-import { OverviewCharts } from '@/components/overview-charts'
+import { getOverview } from '@/lib/queries/overview'
+import { OverviewDashboard } from '@/components/dashboard/overview-dashboard'
 import { AddAccountDialog } from '@/components/add-account-dialog'
 
 export default async function DashboardPage() {
@@ -29,14 +28,7 @@ export default async function DashboardPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <StatCards totals={overview.totals} />
-          <OverviewCharts
-            cumulative={toCumulative(overview.timeseries)}
-            virality={overview.virality}
-            duration={overview.duration}
-          />
-        </div>
+        <OverviewDashboard overview={overview} />
       )}
     </div>
   )

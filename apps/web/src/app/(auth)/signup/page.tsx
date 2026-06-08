@@ -28,6 +28,10 @@ export default function SignupPage() {
       setError(body.error ?? 'Signup failed')
       return
     }
+    if (body.redirect) {
+      window.location.href = body.redirect
+      return
+    }
     setDone(true)
   }
 

@@ -32,7 +32,11 @@ const channelSchema = z.object({
 
 const playlistItemsSchema = z.object({
   items: z.array(z.object({ contentDetails: z.object({ videoId: z.string() }) })).default([]),
+  nextPageToken: z.string().optional(),
 })
+
+/** Hard cap on backfill pages (50 ids/page) so a giant channel can't run away. */
+const MAX_BACKFILL_PAGES = 40
 
 const videosSchema = z.object({
   items: z
@@ -74,7 +78,8 @@ async function getJson(url: string): Promise<unknown> {
 
 export async function scrapeYoutube(
   job: SyncJobData,
-  oauthAccessToken?: string | null
+  oauthAccessToken?: string | null,
+  full = false
 ): Promise<ScrapeResult> {
   const key = env.YOUTUBE_API_KEY
   // 1. Resolve channel (by stored channel id, else by handle).
@@ -87,12 +92,21 @@ export async function scrapeYoutube(
   const channel = channelSchema.parse(channelRaw).items[0]
   if (!channel) return { account: emptyAccount(), posts: [], status: 'not_found' }
 
-  // 2. Recent uploads.
+  // 2. Uploads — one page (50) for a normal sync, or every page for a backfill.
   const uploads = channel.contentDetails.relatedPlaylists.uploads
-  const playlistRaw = await getJson(
-    `${API}/playlistItems?part=contentDetails&playlistId=${uploads}&maxResults=50&key=${key}`
-  )
-  const videoIds = playlistItemsSchema.parse(playlistRaw).items.map((i) => i.contentDetails.videoId)
+  const videoIds: string[] = []
+  let pageToken: string | undefined
+  let pages = 0
+  do {
+    const tokenParam = pageToken ? `&pageToken=${pageToken}` : ''
+    const playlistRaw = await getJson(
+      `${API}/playlistItems?part=contentDetails&playlistId=${uploads}&maxResults=50${tokenParam}&key=${key}`
+    )
+    const page = playlistItemsSchema.parse(playlistRaw)
+    for (const i of page.items) videoIds.push(i.contentDetails.videoId)
+    pageToken = full ? page.nextPageToken : undefined
+    pages += 1
+  } while (pageToken && pages < MAX_BACKFILL_PAGES)
 
   // 3. Video details (batched by 50).
   const posts: NormalizedPost[] = []

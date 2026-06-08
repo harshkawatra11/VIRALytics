@@ -31,7 +31,8 @@ export async function enqueueBackfill(
   }
 
   await queues.backfill.add(`backfill:${accountId}`, jobData, {
-    jobId: `backfill:${accountId}`,
+    // jobId must not contain ':' (BullMQ restriction) — use '_' as the separator.
+    jobId: `backfill_${accountId}`,
     priority: 10,
   })
   logger.info({ accountId }, 'backfill enqueued')
