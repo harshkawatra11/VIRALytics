@@ -143,7 +143,7 @@ This works regardless of which grievance brought them, and it directly attacks l
   and is unstable for new accounts). `packages/core/src/viral-score.ts`.
 
 ### Phase 3 — Parity features that retain switchers
-- **Discovery v1:** in-network "Trending" feed (top movers by velocity across the user's
+- **Discovery v1:** in-network "Trending" feed (top movers by velocity across the user's.
   accounts/collections — cheap, data already exists) + a **swipe file** saved-posts type.
 - **Team / agency:** members + roles, **client-shareable read-only dashboard links**,
   seat-aware billing. Aligns the Agency plan with its named audience (single-manager today).
@@ -162,8 +162,7 @@ This works regardless of which grievance brought them, and it directly attacks l
 
 *(vidIQ-style AI/SEO growth tooling — keyword research, title/thumbnail AI, channel
 audit — is a separate, larger bet and deliberately out of scope. A realistic AI wedge
-later is **insight not search**: "why did this post pop," hooks extracted from the user's
-own top performers, using the post corpus already stored.)*
+later is **insight not search**: "why did this post pop," hooks extracted from the user's, own top performers, using the post corpus already stored.)*
 
 ---
 

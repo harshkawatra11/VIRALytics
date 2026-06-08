@@ -94,7 +94,7 @@ export async function scrapeInstagram(job: SyncJobData): Promise<ScrapeResult> {
   const p = profile.data
   if (p.private) return { account: empty(), posts: [], status: 'private' }
 
-  const posts: NormalizedPost[] = (p.latestPosts ?? []).map(mapIgPost)
+  const posts = await enrichInstagramVideoCounts((p.latestPosts ?? []).map(mapIgPost))
 
   return {
     account: {
@@ -106,6 +106,48 @@ export async function scrapeInstagram(job: SyncJobData): Promise<ScrapeResult> {
       platformId: p.id ?? null,
     },
     posts,
+  }
+}
+
+async function enrichInstagramVideoCounts(posts: NormalizedPost[]): Promise<NormalizedPost[]> {
+  const videoUrls = posts
+    .filter((post) => post.postType === 'reel' || post.postType === 'video')
+    .map((post) => post.permalink)
+    .filter((url): url is string => Boolean(url))
+
+  if (videoUrls.length === 0) return posts
+
+  try {
+    const run = await client.actor('apify/instagram-scraper').call({
+      directUrls: videoUrls,
+      resultsType: 'posts',
+      resultsLimit: videoUrls.length,
+      addParentData: false,
+    })
+    const { items } = await client.dataset(run.defaultDatasetId).listItems()
+    const richerPosts = new Map<string, NormalizedPost>()
+
+    for (const item of items) {
+      const parsed = igPostSchema.safeParse(item)
+      if (!parsed.success || !(parsed.data.id || parsed.data.shortCode || parsed.data.url)) continue
+      const post = mapIgPost(parsed.data)
+      richerPosts.set(post.platformPostId, post)
+      if (post.permalink) richerPosts.set(post.permalink, post)
+    }
+
+    return posts.map((post) => {
+      const richer = richerPosts.get(post.platformPostId) ?? (post.permalink ? richerPosts.get(post.permalink) : null)
+      return richer && richer.views > post.views
+        ? {
+            ...post,
+            views: richer.views,
+            durationSeconds: richer.durationSeconds ?? post.durationSeconds,
+            thumbnailUrl: richer.thumbnailUrl ?? post.thumbnailUrl,
+          }
+        : post
+    })
+  } catch {
+    return posts
   }
 }
 

@@ -22,10 +22,22 @@ export const queues = {
   }),
 } as const
 
-/** Route a sync job to its platform queue. De-dupes by jobId per account+type. */
+/** Route a sync job to its platform queue. De-dupes in-flight work, but lets old jobs run again. */
 export async function enqueueSync(data: SyncJobData): Promise<void> {
   const queue = queues[data.platform]
+  const jobId = `${data.jobType}_${data.accountId}`
+  const existing = await queue.getJob(jobId)
+
+  if (existing) {
+    const state = await existing.getState()
+    if (state === 'completed' || state === 'failed') {
+      await existing.remove()
+    } else {
+      return
+    }
+  }
+
   await queue.add(`${data.platform}_${data.jobType}`, data, {
-    jobId: `${data.jobType}_${data.accountId}`,
+    jobId,
   })
 }

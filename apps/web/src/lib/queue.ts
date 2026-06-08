@@ -73,11 +73,28 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 
 /** Enqueue a sync (initial / manual) routed to the platform queue. */
 export async function enqueueSync(data: SyncJobData): Promise<void> {
-  const add = queueFor(QUEUE_NAMES[data.platform]).add(
-    `${data.platform}_${data.jobType}`,
-    data,
-    { jobId: `${data.jobType}_${data.accountId}` }
+  const queue = queueFor(QUEUE_NAMES[data.platform])
+  const jobId = `${data.jobType}_${data.accountId}`
+  const existing = await withTimeout(
+    queue.getJob(jobId),
+    ENQUEUE_TIMEOUT_MS,
+    'Failed to inspect existing sync job'
   )
+
+  if (existing) {
+    const state = await withTimeout(
+      existing.getState(),
+      ENQUEUE_TIMEOUT_MS,
+      'Failed to inspect existing sync job state'
+    )
+    if (state === 'completed' || state === 'failed') {
+      await withTimeout(existing.remove(), ENQUEUE_TIMEOUT_MS, 'Failed to remove stale sync job')
+    } else {
+      return
+    }
+  }
+
+  const add = queue.add(`${data.platform}_${data.jobType}`, data, { jobId })
   await withTimeout(add, ENQUEUE_TIMEOUT_MS, 'Failed to enqueue sync job')
 }
 
