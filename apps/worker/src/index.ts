@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { Worker } from 'bullmq'
 import { createServer } from 'node:http'
 import { connection } from './redis'
@@ -5,8 +6,8 @@ import { logger } from './logger'
 import { CONCURRENCY, MOCK_MODE } from './config'
 import { QUEUE_NAMES } from './queues'
 import { processSync } from './processor'
-import { startSweeper } from './scheduler'
 import { startTokenRefresher } from './token-refresh'
+import { startSweeper } from './sweeper'
 
 logger.info({ mock: MOCK_MODE }, 'VIRALytics worker starting')
 
@@ -26,8 +27,8 @@ for (const w of workers) {
   )
 }
 
-const sweeper = startSweeper()
 const tokenRefresher = startTokenRefresher()
+const sweeper = startSweeper()
 
 // Minimal health endpoint so Railway can health-check the worker.
 const port = Number(process.env.PORT ?? 8080)
@@ -38,8 +39,8 @@ createServer((_req, res) => {
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down')
-  clearInterval(sweeper)
   clearInterval(tokenRefresher)
+  sweeper.stop()
   await Promise.all(workers.map((w) => w.close()))
   await connection.quit()
   process.exit(0)
